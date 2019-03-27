@@ -6,6 +6,16 @@ A low maintenance task queue for python.
 
 🔬 This code is experimental. User discretion is advised.
 
+## Dependencies
+
+- A unix-based operating system
+
+## Design
+
+- Persistence: [`sqlite3`](https://docs.python.org/3/library/sqlite3.html)
+- Serialization: [`json`](https://docs.python.org/3/library/json.html)
+- Processing: [`os.fork()`](https://docs.python.org/3/library/os.html#os.fork)
+
 ## Usage
 
 ### task_queue
