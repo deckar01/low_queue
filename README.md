@@ -18,7 +18,7 @@ A low maintenance task queue for python.
 
 ## Usage
 
-### task_queue
+### @task_queue(path, debug=False)
 
 A decorator interface for pushing work and running tasks. Calling the decorated
 method creates a `TaskQueue` instance, calls `TaskQueue.push()`, then calls
