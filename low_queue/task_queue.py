@@ -1,5 +1,5 @@
 import os
-import json
+import pickle
 import sqlite3
 import time
 
@@ -12,7 +12,7 @@ class TaskQueue:
     WARN = 2
     INFO = 3
 
-    ensure_backlog_exists = 'CREATE TABLE IF NOT EXISTS backlog (work text UNIQUE)'
+    ensure_backlog_exists = 'CREATE TABLE IF NOT EXISTS backlog (work blob UNIQUE)'
     push_work = 'INSERT INTO backlog (work) VALUES (?)'
     get_work = 'SELECT rowid, work FROM backlog'
     remove_work = 'DELETE FROM backlog WHERE rowid=?'
@@ -36,7 +36,8 @@ class TaskQueue:
         self._execute(self.ensure_backlog_exists)
         for work in backlog:
             try:
-                self._execute(self.push_work, json.dumps(work))
+                data = pickle.dumps(work, pickle.HIGHEST_PROTOCOL)
+                self._execute(self.push_work, sqlite3.Binary(data))
             except sqlite3.IntegrityError as e:
                 self.info('ignoring duplicate work')
         self.db.close()
@@ -106,7 +107,7 @@ class TaskQueue:
                 backlog = self._execute(self.get_work).fetchone()
                 id, data = backlog
                 self.info('processing', id)
-                work = json.loads(data)
+                work = pickle.loads(str(data))
                 self.process(work)
                 self.info('deleting', id)
                 self._execute(self.remove_work, id)

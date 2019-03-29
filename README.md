@@ -13,7 +13,7 @@ A low maintenance task queue for python.
 ## Design
 
 - Persistence: [`sqlite3`](https://docs.python.org/3/library/sqlite3.html)
-- Serialization: [`json`](https://docs.python.org/3/library/json.html)
+- Serialization: [`pickle`](https://docs.python.org/3/library/pickle.html)
 - Processing: [`os.fork()`](https://docs.python.org/3/library/os.html#os.fork)
 
 ## Usage
