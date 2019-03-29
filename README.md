@@ -151,20 +151,11 @@ if __name__ == '__main__':
 
 - The work pushed to the queue must be ordered and deterministic to ensure
   duplicate tasks are not created.
-- No record of completed work is maintained. The side effects of the task
-  must be used to indicate the state of the task.
-- There is a narrow window of time between the queue being empty and a worker
-  indicating that it is no longer active that new data could be added to the
-  queue. During this time new workers would not be able to start and work would
-  remain in the queue until the next attempt to start a worker. I have not
-  observed this, but it seems possible. This can be mitigated by retrying jobs
-  that have not completed when their resources are requested and found to be
-  missing. Another solution would be to configure the system to start a worker
-  on an interval via a cron job.
+- No record of completed work is maintained. Side effects of the task must be
+  used to determine the state of the task.
 
 ## Development
 
 ### TODO
 
 - Add tests.
-- Make the backlog read and the status write an atomic transaction.

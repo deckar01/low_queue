@@ -20,6 +20,8 @@ class TaskQueue:
     ensure_status_exists = 'CREATE TABLE IF NOT EXISTS status (active int UNIQUE)'
     declare_active = 'INSERT INTO status (active) VALUES (1)'
     declare_inactive = 'DELETE FROM status'
+    declare_inactive_if_empty = 'DELETE FROM status WHERE NOT EXISTS (SELECT * FROM backlog)'
+    check_status = 'SELECT active FROM status'
 
     def __init__(self, log_level=ERROR):
         self.log_level = log_level
@@ -89,12 +91,19 @@ class TaskQueue:
         raise last_exception
 
     def _loop(self):
+        self.info('activating')
+        self._execute(self.declare_active)
         try:
             while True:
-                backlog = self._execute(self.get_work).fetchone()
-                if not backlog:
-                    self.log('backlog empty')
+                # Check the backlog and conditionally deactivate in a single
+                # query to ensure the operation is atomic.
+                self._execute(self.declare_inactive_if_empty)
+                active = self._execute(self.check_status).fetchone()
+                if not active:
+                    self.info('backlog empty')
+                    self.info('deactivated')
                     break
+                backlog = self._execute(self.get_work).fetchone()
                 id, data = backlog
                 self.info('processing', id)
                 work = json.loads(data)
@@ -103,3 +112,5 @@ class TaskQueue:
                 self._execute(self.remove_work, id)
         except Exception as e:
             self.error(e)
+            self.error('deactivating')
+            self._execute(self.declare_inactive)
