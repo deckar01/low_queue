@@ -18,7 +18,7 @@ A low maintenance task queue for python.
 
 ## Usage
 
-### @task_queue(path, debug=False)
+### @task_queue(path, log_level=ERROR)
 
 A decorator interface for pushing work and running tasks. Calling the decorated
 method creates a `TaskQueue` instance, calls `TaskQueue.push()`, then calls
@@ -26,7 +26,7 @@ method creates a `TaskQueue` instance, calls `TaskQueue.push()`, then calls
 
 - **Decorator Arguments**
     - **path** `String` - See `TaskQueue.path`.
-    - **debug** `Boolean` - Optional. See `TaskQueue()`.
+    - **log_level** `Boolean` - Optional. See `TaskQueue()`.
 - **Function Arguments**
     - **queue** `TaskQueue` - A reference to the `TaskQueue` instance.
     - **work** `Object` - See `TaskQueue.process()`.
@@ -34,15 +34,15 @@ method creates a `TaskQueue` instance, calls `TaskQueue.push()`, then calls
 **Example**
 
 ```py
-from low_queue import task_queue
+from low_queue import task_queue, TaskQueue
 import time
 
 
-@task_queue('./test.db', debug=True)
+@task_queue('./test.db', log_level=TaskQueue.INFO)
 def test_queue(queue, work):
     # Do slow stuff here.
     time.sleep(2)
-    queue.log(work, 'done')
+    queue.info(work, 'done')
 
 if __name__ == '__main__':
     test_queue(1, 2, 3)
@@ -58,12 +58,13 @@ both the client for requesting tasks and the worker for executing tasks.
 
 An SQLite path used to persist the backlog of tasks. This property must be
 defined in a subclass.
-defined in a subclass.
 
-#### TaskQueue(debug=False)
+#### TaskQueue(log_level=ERROR)
 
 - **Arguments**
-    - **debug** `Boolean` - Prints a log of all activity. Defaults to `False`.
+    - **log_level** `Boolean` - Prints a log of all activity. Defaults to only
+      print errors. Options are `ERROR`, `WARN`, `INFO`, and `NONE`. These flags
+      are static attributes of the `TaskQueue` class.
 
 #### TaskQueue.process(work)
 
@@ -87,6 +88,43 @@ Start a worker process to execute tasks unless one is already active. The
 current process forks, detaches, and processes the queue until it is empty. This
 allows the calling process to continue and exit immediately.
 
+#### TaskQueue.error(message, ...)
+
+Output an error message. Additional messages are separated by spaces.
+
+- **Arguments**
+    - **message** `String` - The message to print.
+
+#### TaskQueue.warn(message, ...)
+
+Output a warning message. Additional messages are separated by spaces.
+
+- **Arguments**
+    - **message** `String` - The message to print.
+
+#### TaskQueue.info(message, ...)
+
+Output a message. Additional messages are separated by spaces.
+
+- **Arguments**
+    - **message** `String` - The message to print.
+
+#### TaskQueue.ERROR
+
+A flag that indicates that only error messages should be logged.
+
+#### TaskQueue.WARN
+
+A flag that indicates that warning and error messages should be logged.
+
+#### TaskQueue.INFO
+
+A flag that indicates that all messages should be logged.
+
+#### TaskQueue.SILENT
+
+A flag that indicates that no messages should be logged.
+
 **Example**
 
 ```py
@@ -100,10 +138,10 @@ class TestQueue(TaskQueue):
     def test_queue(self, work):
         # Do slow stuff here.
         time.sleep(2)
-        queue.log(work, 'done')
+        queue.info(work, 'done')
 
 if __name__ == '__main__':
-    queue = TestQueue(debug=True)
+    queue = TestQueue(log_level=TaskQueue.INFO)
     queue.push(1, 2, 3)
     queue.push(3, 4, 5)
     queue.start()

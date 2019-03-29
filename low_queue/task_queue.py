@@ -7,6 +7,10 @@ class TaskQueue:
     path = None
     db = None
     MAX_RETRIES = 20
+    SILENT = 0
+    ERROR = 1
+    WARN = 2
+    INFO = 3
 
     ensure_backlog_exists = 'CREATE TABLE IF NOT EXISTS backlog (work text UNIQUE)'
     push_work = 'INSERT INTO backlog (work) VALUES (?)'
@@ -17,8 +21,8 @@ class TaskQueue:
     declare_active = 'INSERT INTO status (active) VALUES (1)'
     declare_inactive = 'DELETE FROM status'
 
-    def __init__(self, debug=False):
-        self.debug = debug
+    def __init__(self, log_level=ERROR):
+        self.log_level = log_level
         if not self.path:
             raise NotImplemented('The path property has not been implemented.')
 
@@ -32,7 +36,7 @@ class TaskQueue:
             try:
                 self._execute(self.push_work, json.dumps(work))
             except sqlite3.IntegrityError as e:
-                self.log('ignoring duplicate work')
+                self.info('ignoring duplicate work')
         self.db.close()
 
     def start(self):
@@ -45,20 +49,22 @@ class TaskQueue:
         try:
             self._execute(self.ensure_backlog_exists)
             self._execute(self.ensure_status_exists)
-            self.log('activating')
-            self._execute(self.declare_active)
             self._loop()
-            self.log('deactivating')
-            self._execute(self.declare_inactive)
         except sqlite3.IntegrityError as e:
-            self.log('another worker is already active')
+            self.info('another worker is already active')
         finally:
             self.db.close()
-            self.log('exiting')
+            self.info('exiting')
             exit(0)
 
-    def log(self, *args):
-        if self.debug:
+    def warn(self, *args):
+        self.log(self.WARN, *args)
+
+    def info(self, *args):
+        self.log(self.INFO, *args)
+
+    def log(self, log_level, *args):
+        if log_level <= self.log_level:
             message = ' '.join(str(arg) for arg in args)
             print('[{}] {}'.format(os.getpid(), message))
 
@@ -77,8 +83,8 @@ class TaskQueue:
                 last_exception = e
                 tries += 1
                 wait = self._wait(tries)
-                self.log(e)
-                self.log('retrying in', wait, 'seconds')
+                self.warn(e)
+                self.warn('retrying in', wait, 'seconds')
                 time.sleep(wait)
         raise last_exception
 
@@ -90,10 +96,10 @@ class TaskQueue:
                     self.log('backlog empty')
                     break
                 id, data = backlog
-                self.log('processing', id)
+                self.info('processing', id)
                 work = json.loads(data)
                 self.process(work)
-                self.log('deleting', id)
+                self.info('deleting', id)
                 self._execute(self.remove_work, id)
         except Exception as e:
-            self.log(e)
+            self.error(e)
